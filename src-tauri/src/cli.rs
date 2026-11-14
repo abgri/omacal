@@ -1,7 +1,7 @@
-//! The read-only CLI: the calendar omacal already syncs, answerable from a
+//! The read-only CLI: the calendar omacal-brian already syncs, answerable from a
 //! terminal — and so from a script, a bar module, or an agent.
 //!
-//! `omacal agenda`, `events list`, `search`, `calendars` — reads, and reads
+//! `omacal-brian agenda`, `events list`, `search`, `calendars` — reads, and reads
 //! only. Phase 1 stops deliberately short of writes: an agent creating an
 //! event must inherit the same guards the form has (who gets mailed, etag
 //! conflicts, recurrence scopes), and those live in the running app —
@@ -10,16 +10,16 @@
 //! cannot damage anything.
 //!
 //! It runs *before* Tauri exists: no window, no tray, no single-instance
-//! forwarding — `omacal agenda` in a terminal must never wake a GUI or be
+//! forwarding — `omacal-brian agenda` in a terminal must never wake a GUI or be
 //! swallowed by the running one. The database is opened read-only against
 //! the file the app maintains (WAL keeps that safe beside the app's own
 //! writes), and a missing database is an answer, not a crash: exit 3,
-//! "launch omacal first".
+//! "launch omacal-brian first".
 //!
 //! Two output registers, hey-cli's discipline: `--json` prints an envelope
 //! (`{"ok":true,"data":…}` / `{"ok":false,"error":…}`) and never prompts,
 //! never decorates; without it, output is for a person. Exit codes are
-//! stable and documented on `omacal cli-help`:
+//! stable and documented on `omacal-brian cli-help`:
 //! 0 ok · 2 usage · 3 no database · 4 error.
 //!
 //! Split as ever: parsing, date windows and row assembly are pure and
@@ -35,43 +35,43 @@ const EXIT_NO_DB: i32 = 3;
 pub(crate) const EXIT_ERROR: i32 = 4;
 
 const USAGE: &str = "\
-omacal CLI — your calendar from the terminal: reads answer offline from
+omacal-brian CLI — your calendar from the terminal: reads answer offline from
 the synced database; writes execute through the running app's own guards.
 
 USAGE
-  omacal agenda [--days N] [--json]        the next N days (default 7)
-  omacal events list --from YYYY-MM-DD --to YYYY-MM-DD [--json]
-  omacal events show ID [--json]           one event whole: guest list with
+  omacal-brian agenda [--days N] [--json]        the next N days (default 7)
+  omacal-brian events list --from YYYY-MM-DD --to YYYY-MM-DD [--json]
+  omacal-brian events show ID [--json]           one event whole: guest list with
                                            each person's answer, join link,
                                            organizer, description
-  omacal search <query> [--json]           event and task titles, nearest
+  omacal-brian search <query> [--json]           event and task titles, nearest
                                            first (tasks by due date)
-  omacal calendars [--json]                every calendar, with ids
-  omacal tasks [--all] [--json]            what still needs doing, with ids
-  omacal tasks lists [--json]              the lists a task can go on, with ids
-  omacal tasks add \"title\" [--list ID|NAME] [--due YYYY-MM-DD] [--at HH:MM] [--priority LEVEL]
-  omacal tasks done ID | omacal tasks reopen ID
-  omacal tasks edit ID [--title T] [--due D|none] [--at HH:MM|none] [--notes N|none] [--priority LEVEL|none]
-  omacal weather [--json]                  the app's forecast, and the place it is for
-  omacal doctor [--json]                   diagnose this install
-  omacal skill                             print the agent skill this binary carries
-  omacal skill install                     install it for your agents (Claude Code linked
+  omacal-brian calendars [--json]                every calendar, with ids
+  omacal-brian tasks [--all] [--json]            what still needs doing, with ids
+  omacal-brian tasks lists [--json]              the lists a task can go on, with ids
+  omacal-brian tasks add \"title\" [--list ID|NAME] [--due YYYY-MM-DD] [--at HH:MM] [--priority LEVEL]
+  omacal-brian tasks done ID | omacal-brian tasks reopen ID
+  omacal-brian tasks edit ID [--title T] [--due D|none] [--at HH:MM|none] [--notes N|none] [--priority LEVEL|none]
+  omacal-brian weather [--json]                  the app's forecast, and the place it is for
+  omacal-brian doctor [--json]                   diagnose this install
+  omacal-brian skill                             print the agent skill this binary carries
+  omacal-brian skill install                     install it for your agents (Claude Code linked
                                            automatically; refreshed on every update)
-  omacal commands [--json]                 every command and flag, machine-readable
-  omacal cli-help                          this text
+  omacal-brian commands [--json]                 every command and flag, machine-readable
+  omacal-brian cli-help                          this text
 
 WRITES (the running app executes them, through its own guards)
-  omacal events create --title T --date D --start HH:MM --end HH:MM
+  omacal-brian events create --title T --date D --start HH:MM --end HH:MM
          [--end-date D] [--all-day --last-day D] [--calendar ID]
          [--location L] [--description TEXT] [--guest a@b]…
          [--notify all|none] [--json]
          [--repeat daily|weekdays|weekly|monthly|yearly]
          [--days MO,WE,FR] [--until YYYY-MM-DD | --count N]
-  omacal events update ID --occurrence MS [--title T] [--date D]
+  omacal-brian events update ID --occurrence MS [--title T] [--date D]
          [--start HH:MM] [--end HH:MM] [--location L] [--description TEXT]
          [--scope this|following|all] [--notify all|none] [--json]
-  omacal events delete ID --occurrence MS [--scope this|following|all] [--json]
-  omacal events respond ID yes|maybe|no [--scope this|all] [--occurrence MS]
+  omacal-brian events delete ID --occurrence MS [--scope this|following|all] [--json]
+  omacal-brian events respond ID yes|maybe|no [--scope this|all] [--occurrence MS]
          [--keep-meeting] [--json]
 
   ID and MS are `events list --json`'s own eventId and startMs. Times read
@@ -87,18 +87,17 @@ WRITES (the running app executes them, through its own guards)
   an event that already exists is the app's form, not `events update`.
 
 UPDATING
-  The app updates itself: when a release exists its header grows an Update
-  button. `omacal doctor` prints the version you are on. An AppImage
-  installed by the install script is also replaced by re-running that line;
-  a .deb or .rpm is replaced by the newer package.
+  OmaCal Brian uses reviewed custom builds only. Upstream releases are
+  informational; stock updates are never installed by this fork.
+  `omacal-brian doctor` prints the current version.
 
 OUTPUT
   --json prints {\"ok\":true,\"data\":…} on success and
   {\"ok\":false,\"error\":{\"code\",\"message\"}} on failure; nothing prompts.
 
 EXIT CODES
-  0 ok · 2 usage error · 3 no database (launch omacal and connect an
-  account first) · 4 internal error · 5 omacal is not running (writes
+  0 ok · 2 usage error · 3 no database (launch omacal-brian and connect an
+  account first) · 4 internal error · 5 omacal-brian is not running (writes
   need it) · 6 the app refused the write (a conflict, a guard — read the
   message, change the request; retrying as-is changes nothing)";
 
@@ -116,7 +115,7 @@ pub(crate) enum Command {
     /// adds the recently completed, which the window keeps in its own
     /// section rather than in the list.
     Tasks { all: bool },
-    /// `omacal tasks lists`: every list a task can be added to.
+    /// `omacal-brian tasks lists`: every list a task can be added to.
     TaskLists,
     /// The forecast the window shows, off the same cache — and where it is
     /// for, since that place may not be where the user is.
@@ -260,7 +259,7 @@ pub(crate) fn parse(argv: &[String]) -> Option<Result<Invocation, String>> {
             None => build(Command::Skill { install: false }),
             Some("install") => build(Command::Skill { install: true }),
             Some(other) => Some(Err(format!(
-                "usage: omacal skill [install] — not \"{other}\""
+                "usage: omacal-brian skill [install] — not \"{other}\""
             ))),
         },
         "calendars" => build(Command::Calendars),
@@ -308,7 +307,7 @@ pub(crate) fn parse(argv: &[String]) -> Option<Result<Invocation, String>> {
                     return Some(match id {
                         Some(id) => Ok(Invocation { command: Command::Show { id }, json }),
                         None => Err(
-                            "usage: omacal events show ID — `omacal events list` prints ids"
+                            "usage: omacal-brian events show ID — `omacal-brian events list` prints ids"
                                 .into(),
                         ),
                     });
@@ -316,8 +315,8 @@ pub(crate) fn parse(argv: &[String]) -> Option<Result<Invocation, String>> {
                 Some("list") => {}
                 _ => {
                     return Some(Err(
-                        "usage: omacal events list|create|update|delete|respond — \
-                         see omacal cli-help"
+                        "usage: omacal-brian events list|create|update|delete|respond — \
+                         see omacal-brian cli-help"
                             .into(),
                     ));
                 }
@@ -344,7 +343,7 @@ pub(crate) fn parse(argv: &[String]) -> Option<Result<Invocation, String>> {
                 .map(|a| a.as_str())
                 .collect();
             if query.is_empty() {
-                return Some(Err("usage: omacal search <query>".into()));
+                return Some(Err("usage: omacal-brian search <query>".into()));
             }
             build(Command::Search { query: query.join(" ") })
         }
@@ -482,7 +481,7 @@ pub(crate) struct DetailGuest {
     pub is_self: bool,
 }
 
-/// `omacal events show` — one event whole. The same field names [`Row`]
+/// `omacal-brian events show` — one event whole. The same field names [`Row`]
 /// uses wherever the two overlap, so a script that learned the listing
 /// reads this for free.
 #[derive(Debug, Serialize)]
@@ -665,13 +664,13 @@ pub(crate) fn app_data_dir() -> Option<std::path::PathBuf> {
     // points; it calls this now.
     let home = || std::env::var_os("HOME").map(std::path::PathBuf::from);
     Some(if cfg!(target_os = "macos") {
-        home()?.join("Library/Application Support/com.omacal.app")
+        home()?.join("Library/Application Support").join(crate::identity::APP_ID)
     } else {
         std::env::var_os("XDG_DATA_HOME")
             .map(std::path::PathBuf::from)
             .filter(|p| p.is_absolute())
             .or_else(|| home().map(|h| h.join(".local/share")))?
-            .join("com.omacal.app")
+            .join(crate::identity::APP_ID)
     })
 }
 
@@ -729,9 +728,9 @@ fn print_rows_human(rows: &[Row]) {
 /// sidebar's: a task due today is due today all day, not late at 00:01.
 ///
 /// **A named struct, not an inline `json!`**, only so search can return the
-/// same rows it does: `omacal search` finds tasks too, and a
+/// same rows it does: `omacal-brian search` finds tasks too, and a
 /// second hand-built object would be a second contract to keep in step. The
-/// keys below are the whole task-row contract — `omacal tasks --json` and a
+/// keys below are the whole task-row contract — `omacal-brian tasks --json` and a
 /// search's `data.tasks` are the same shape on purpose.
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -946,7 +945,7 @@ pub(crate) fn fail(json: bool, code: &str, message: &str, exit: i32) -> i32 {
     if json {
         println!("{}", serde_json::json!({ "ok": false, "error": { "code": code, "message": message } }));
     } else {
-        eprintln!("omacal: {message}");
+        eprintln!("omacal-brian: {message}");
     }
     exit
 }
@@ -1027,7 +1026,7 @@ pub(crate) fn run(inv: Invocation) -> i32 {
                     for old in &done.legacy {
                         println!("Note: {old} is the old hand-copied skill — this replaces it; remove it when convenient.");
                     }
-                    println!("It stays current by itself: every omacal run refreshes it after an update.");
+                    println!("It stays current by itself: every omacal-brian run refreshes it after an update.");
                 }
                 EXIT_OK
             }
@@ -1047,7 +1046,7 @@ pub(crate) fn run(inv: Invocation) -> i32 {
         return fail(
             inv.json,
             "no_database",
-            "no omacal database yet — launch omacal and connect an account first",
+            "no omacal-brian database yet — launch omacal-brian and connect an account first",
             EXIT_NO_DB,
         );
     }
@@ -1146,7 +1145,7 @@ pub(crate) fn run(inv: Invocation) -> i32 {
                     if inv.json {
                         print_json(&cals);
                     } else if cals.is_empty() {
-                        println!("No calendars — connect an account in omacal first.");
+                        println!("No calendars — connect an account in omacal-brian first.");
                     } else {
                         for c in &cals {
                             println!(
@@ -1188,7 +1187,7 @@ pub(crate) fn run(inv: Invocation) -> i32 {
                         None => Ok(fail(
                             inv.json,
                             "usage",
-                            &format!("no event {id} — `omacal events list` prints real ids"),
+                            &format!("no event {id} — `omacal-brian events list` prints real ids"),
                             EXIT_USAGE,
                         )),
                     }
@@ -1234,7 +1233,7 @@ pub(crate) fn run(inv: Invocation) -> i32 {
 /// (a JSON stream must not carry log lines) and before Tauri is built.
 pub(crate) fn maybe_run_and_exit() {
     let argv: Vec<String> = std::env::args().collect();
-    // Rust ships with SIGPIPE ignored, which turns `omacal agenda | head`
+    // Rust ships with SIGPIPE ignored, which turns `omacal-brian agenda | head`
     // into a panic the moment head closes the pipe. Restore the default —
     // die quietly, the way every Unix filter does — but only once this is
     // known to be a CLI run: the GUI's webview and sockets want the ignore.
@@ -1250,13 +1249,13 @@ pub(crate) fn maybe_run_and_exit() {
             std::process::exit(run(inv))
         }
         Some(Err(usage)) => {
-            eprintln!("omacal: {usage}\n\n{USAGE}");
+            eprintln!("omacal-brian: {usage}\n\n{USAGE}");
             std::process::exit(EXIT_USAGE);
         }
     }
 }
 
-/// `omacal doctor`: every fact a bug report needs, in one paste.
+/// `omacal-brian doctor`: every fact a bug report needs, in one paste.
 ///
 /// Born from issue #1, where the reporter spent an afternoon establishing
 /// facts this prints in two seconds — which binary, which channel, whether
@@ -1310,7 +1309,7 @@ mod doctor {
             if db.exists() {
                 format!("{}", db.display())
             } else {
-                format!("missing — launch omacal and connect an account ({})", db.display())
+                format!("missing — launch omacal-brian and connect an account ({})", db.display())
             },
         );
 
@@ -1331,15 +1330,15 @@ mod doctor {
         // agent has nothing failing. Installed means the canonical copy is
         // this module's own (the marker is the claim, cli_skill.rs).
         let skill = std::env::var_os("HOME").map(|h| {
-            std::path::Path::new(&h).join(".agents/skills/omacal/.managed-by-omacal").exists()
+            std::path::Path::new(&h).join(".agents/skills/omacal-brian/.managed-by-omacal").exists()
         });
         push(
             &mut checks,
             "agent skill",
             None,
             match skill {
-                Some(true) => "installed (~/.agents/skills/omacal, auto-refreshed)".into(),
-                _ => "not installed — `omacal skill install` wires your agents".into(),
+                Some(true) => "installed (~/.agents/skills/omacal-brian, auto-refreshed)".into(),
+                _ => "not installed — `omacal-brian skill install` wires your agents".into(),
             },
         );
 
@@ -1348,7 +1347,7 @@ mod doctor {
             "custom credentials",
             None,
             if std::env::var_os("HOME")
-                .map(|h| std::path::Path::new(&h).join(".config/omacal/config.toml").exists())
+                .map(|h| std::path::Path::new(&h).join(crate::identity::CONFIG_RELATIVE_PATH).exists())
                 .unwrap_or(false)
             {
                 "config.toml present (own Google client in use)".into()
@@ -1359,7 +1358,7 @@ mod doctor {
 
         // Network, with the update endpoint doubling as the reachability
         // probe: one request answers both "is there internet" and "is a
-        // newer omacal out".
+        // newer omacal-brian out".
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build();
         if let Ok(rt) = rt {
             let latest = rt.block_on(async {
@@ -1430,7 +1429,7 @@ mod tests {
         s.parse::<jiff::Timestamp>().unwrap().as_millisecond()
     }
 
-    /// `omacal tasks lists`: the id `--list` takes, the name it also takes,
+    /// `omacal-brian tasks lists`: the id `--list` takes, the name it also takes,
     /// where the list is kept and what is open on it.
     #[test]
     fn task_lists_print_their_ids_names_and_where_they_live() {
@@ -1493,7 +1492,7 @@ mod tests {
 
     /// The property everything else stands on: nothing the GUI already
     /// answers is ever the CLI's. A bare launch, the tray flags, a date —
-    /// all fall through, or `omacal --sync-now` in a script would print
+    /// all fall through, or `omacal-brian --sync-now` in a script would print
     /// usage instead of syncing.
     #[test]
     fn everything_the_gui_owns_falls_through() {

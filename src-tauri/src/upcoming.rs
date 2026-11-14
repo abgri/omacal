@@ -420,7 +420,7 @@ pub(crate) fn assemble_tasks(rows: &[omacal_store::TaskRow], now_ms: i64, tz: &j
     out
 }
 
-/// Where the feed lives: `$XDG_STATE_HOME/omacal/upcoming.json`, defaulting to
+/// Where the feed lives: `$XDG_STATE_HOME/omacal-brian/upcoming.json`, defaulting to
 /// `~/.local/state`. State, not config or data — it is derived, disposable,
 /// and rewritten constantly, which is exactly what the XDG state dir is for
 /// (and where Omarchy 4 keeps its own equivalents).
@@ -431,7 +431,7 @@ pub fn feed_path() -> Option<PathBuf> {
         .or_else(|| {
             std::env::var_os("HOME").map(|h| Path::new(&h).join(".local/state"))
         })?;
-    Some(base.join("omacal/upcoming.json"))
+    Some(base.join(crate::identity::SLUG).join("upcoming.json"))
 }
 
 /// Recomputes and rewrites the feed. Never fails the caller and never panics:
@@ -973,7 +973,7 @@ mod tests {
     fn the_feed_path_honours_xdg_state_home_shape() {
         // Pure shape check — no env mutation, which would race other tests.
         if let Some(p) = feed_path() {
-            assert!(p.ends_with("omacal/upcoming.json"));
+            assert!(p.ends_with("omacal-brian/upcoming.json"));
             assert!(p.is_absolute());
         }
     }

@@ -1,4 +1,4 @@
-//! `omacal tasks` — the task half of the CLI.
+//! `omacal-brian tasks` — the task half of the CLI.
 //!
 //! Same division as the events side: the **list is a read**, straight off
 //! the synced database with no app running, and every **change goes over
@@ -13,7 +13,7 @@
 
 use crate::cli::{fail, EXIT_USAGE};
 
-/// Which list `--list` names: its id, or its name as `omacal tasks lists`
+/// Which list `--list` names: its id, or its name as `omacal-brian tasks lists`
 /// prints it. A number is always an id.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum ListRef {
@@ -37,9 +37,9 @@ pub(crate) fn resolve_list(
                 lists.iter().filter(|l| l.name.to_lowercase() == wanted).collect();
             match hits.as_slice() {
                 [one] => Ok(Some(one.calendar_id)),
-                [] => Err(format!("no task list is called “{name}” — `omacal tasks lists` names them")),
+                [] => Err(format!("no task list is called “{name}” — `omacal-brian tasks lists` names them")),
                 _ => Err(format!(
-                    "more than one list is called “{name}” — use its id from `omacal tasks lists`"
+                    "more than one list is called “{name}” — use its id from `omacal-brian tasks lists`"
                 )),
             }
         }
@@ -149,7 +149,7 @@ pub(crate) fn due_at(
     Ok((Some(ms), false))
 }
 
-/// `omacal tasks add|done|reopen|edit …`, or `None` for the bare read.
+/// `omacal-brian tasks add|done|reopen|edit …`, or `None` for the bare read.
 pub(crate) fn parse(rest: &[&String]) -> Option<Result<TaskCmd, String>> {
     // The verb is the first word that is not a flag: `tasks --all --json`
     // is the read, and only `tasks add …` and friends are changes.
@@ -179,14 +179,14 @@ pub(crate) fn parse(rest: &[&String]) -> Option<Result<TaskCmd, String>> {
     let id_of = |what: &str| -> Result<i64, String> {
         positional()
             .and_then(|v| v.parse::<i64>().ok())
-            .ok_or_else(|| format!("usage: omacal tasks {what} ID — `omacal tasks` prints ids"))
+            .ok_or_else(|| format!("usage: omacal-brian tasks {what} ID — `omacal-brian tasks` prints ids"))
     };
 
     Some((|| {
         match verb {
             "add" => {
                 let summary = positional()
-                    .ok_or_else(|| "usage: omacal tasks add \"a title\" [--list ID|NAME] [--due YYYY-MM-DD] [--at HH:MM] [--priority none|low|medium|high]".to_string())?;
+                    .ok_or_else(|| "usage: omacal-brian tasks add \"a title\" [--list ID|NAME] [--due YYYY-MM-DD] [--at HH:MM] [--priority none|low|medium|high]".to_string())?;
                 let list = take("--list")?.map(|v| match v.parse::<i64>() {
                     Ok(id) => ListRef::Id(id),
                     Err(_) => ListRef::Name(v),
@@ -216,7 +216,7 @@ pub(crate) fn parse(rest: &[&String]) -> Option<Result<TaskCmd, String>> {
                 let TaskCmd::Edit { title, due, at, notes, priority, .. } = &cmd else { unreachable!() };
                 if title.is_none() && due.is_none() && at.is_none() && notes.is_none() && priority.is_none() {
                     return Err(
-                        "omacal tasks edit ID needs something to change: --title, --due, --at, --notes or --priority \
+                        "omacal-brian tasks edit ID needs something to change: --title, --due, --at, --notes or --priority \
                          (--due none clears the date)"
                             .into(),
                     );
@@ -224,7 +224,7 @@ pub(crate) fn parse(rest: &[&String]) -> Option<Result<TaskCmd, String>> {
                 Ok(cmd)
             }
             other => Err(format!(
-                "usage: omacal tasks [add|done|reopen|edit] — not \"{other}\""
+                "usage: omacal-brian tasks [add|done|reopen|edit] — not \"{other}\""
             )),
         }
     })())
@@ -269,7 +269,7 @@ pub(crate) async fn execute(pool: &sqlx::SqlitePool, cmd: &TaskCmd, json: bool) 
         TaskCmd::Edit { id, title, due, at, notes, priority } => {
             let task = match omacal_store::task_by_id(pool, *id).await {
                 Ok(Some(t)) => t,
-                Ok(None) => return refuse("no task with that id — `omacal tasks` prints them"),
+                Ok(None) => return refuse("no task with that id — `omacal-brian tasks` prints them"),
                 Err(e) => return fail(json, "read_failed", &e.to_string(), crate::cli::EXIT_ERROR),
             };
 
@@ -305,7 +305,7 @@ pub(crate) async fn execute(pool: &sqlx::SqlitePool, cmd: &TaskCmd, json: bool) 
 /// `crate::ipc::Request`'s own shape (`v` + `cmd`, snake_case fields), the
 /// same one `cli_write.rs` builds for the events side. These used to carry
 /// `kind` and camelCase field names instead, a leftover of the webview's own
-/// vocabulary that the socket never spoke: every `omacal tasks add/edit`
+/// vocabulary that the socket never spoke: every `omacal-brian tasks add/edit`
 /// refused with "the request names no protocol version", silently, since
 /// the feature shipped.
 pub(crate) fn create_request(
@@ -599,7 +599,7 @@ mod tests {
     /// (`crate::ipc::Request`'s own derive). A request this module cannot
     /// get past that parser is not a "no task list" or "no such task"
     /// refusal — it never reaches those checks — it is silently the wrong
-    /// shape, and `omacal tasks add/edit/done` answered "the request names
+    /// shape, and `omacal-brian tasks add/edit/done` answered "the request names
     /// no protocol version" for every caller since the feature shipped.
     /// Proving these three round-trip through the real parser is the
     /// regression test: a return to `kind`/camelCase fails here before it

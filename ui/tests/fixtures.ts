@@ -2303,6 +2303,12 @@ export const FIXTURES: Record<string, Record<string, any>> = {
     unsynced: { ribbon: unsyncedBigYear() },
   },
   EventBlock: {
+    'contrast-green': { ...block('Green event', 60, 'accepted'), event: { ...block('Green event', 60, 'accepted').event, color: '#80cbc4' } },
+    'contrast-green-needsAction': { ...block('Green needsAction', 60, 'needsAction'), event: { ...block('Green needsAction', 60, 'needsAction').event, color: '#80cbc4' } },
+    'contrast-green-declined': { ...block('Green declined', 60, 'declined'), event: { ...block('Green declined', 60, 'declined').event, color: '#80cbc4' } },
+    'contrast-green-tentative': { ...block('Green tentative', 60, 'tentative'), event: { ...block('Green tentative', 60, 'tentative').event, color: '#80cbc4' } },
+    'contrast-lavender': { ...block('Lavender event', 60, 'accepted'), event: { ...block('Lavender event', 60, 'accepted').event, color: '#b39ddb' } },
+    'contrast-blue': { ...block('Blue event', 60, 'accepted'), event: { ...block('Blue event', 60, 'accepted').event, color: '#7986cb' } },
     // The duration ladder.
     'ladder-15': block('Sync w/ Ivan', 15, 'accepted'),
     'ladder-60': block('Excitel weekly', 60, 'accepted'),

@@ -8,7 +8,7 @@
 //! Three rules, all theirs, all load-bearing:
 //!
 //! **One canonical copy, agents get symlinks.** `skill install` writes
-//! `~/.agents/skills/omacal/SKILL.md` and links `~/.claude/skills/omacal`
+//! `~/.agents/skills/omacal-brian/SKILL.md` and links `~/.claude/skills/omacal-brian`
 //! to it when Claude Code is detected. One copy on disk, every agent reads
 //! the same bytes.
 //!
@@ -29,21 +29,21 @@
 use std::path::{Path, PathBuf};
 
 /// The skill, at compile time, from the same file the repo publishes —
-/// `skills/omacal/SKILL.md` — so the repo copy and the embedded copy cannot
+/// `skills/omacal-brian/SKILL.md` — so the repo copy and the embedded copy cannot
 /// diverge within one commit, and the embedded copy cannot lag the binary.
-pub(crate) const SKILL_MD: &str = include_str!("../../skills/omacal/SKILL.md");
+pub(crate) const SKILL_MD: &str = include_str!("../../skills/omacal-brian/SKILL.md");
 
 /// The ownership marker's file name. Its presence is the whole claim.
 const MARKER: &str = ".managed-by-omacal";
 
-/// Where the canonical copy lives under a home: `~/.agents/skills/omacal`.
+/// Where the canonical copy lives under a home: `~/.agents/skills/omacal-brian`.
 fn canonical_dir(home: &Path) -> PathBuf {
-    home.join(".agents").join("skills").join("omacal")
+    home.join(".agents").join("skills").join(crate::identity::SLUG)
 }
 
-/// Where Claude Code reads skills from: `~/.claude/skills/omacal`.
+/// Where Claude Code reads skills from: `~/.claude/skills/omacal-brian`.
 fn claude_dir(home: &Path) -> PathBuf {
-    home.join(".claude").join("skills").join("omacal")
+    home.join(".claude").join("skills").join(crate::identity::SLUG)
 }
 
 /// What one `skill install` did, for both registers to print.
@@ -71,7 +71,7 @@ fn write_owned(dir: &Path) -> Result<(), String> {
         ));
     }
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-    std::fs::write(dir.join(MARKER), "installed by `omacal skill install`\n")
+    std::fs::write(dir.join(MARKER), "installed by `omacal-brian skill install`\n")
         .map_err(|e| e.to_string())?;
     std::fs::write(dir.join("SKILL.md"), SKILL_MD).map_err(|e| e.to_string())?;
     Ok(())
@@ -196,8 +196,8 @@ mod tests {
     /// property everything else here rides on.
     #[test]
     fn the_binary_carries_the_repos_skill() {
-        assert!(SKILL_MD.starts_with("---\nname: omacal\n"), "frontmatter names the skill");
-        assert!(SKILL_MD.contains("omacal events create"), "the write surface is taught");
+        assert!(SKILL_MD.starts_with("---\nname: omacal-brian\n"), "frontmatter names the skill");
+        assert!(SKILL_MD.contains("omacal-brian events create"), "the write surface is taught");
         assert!(SKILL_MD.len() > 2_000, "a real skill, not a stub");
     }
 
@@ -222,7 +222,7 @@ mod tests {
     fn install_writes_the_canonical_copy_and_claims_it() {
         let h = home();
         let done = install(h.path()).unwrap();
-        let dir = h.path().join(".agents/skills/omacal");
+        let dir = h.path().join(".agents/skills/omacal-brian");
         assert_eq!(done.canonical, dir.display().to_string());
         assert_eq!(std::fs::read_to_string(dir.join("SKILL.md")).unwrap(), SKILL_MD);
         assert!(dir.join(MARKER).exists());
@@ -237,7 +237,7 @@ mod tests {
         let h = home();
         std::fs::create_dir_all(h.path().join(".claude")).unwrap();
         let done = install(h.path()).unwrap();
-        let link = h.path().join(".claude/skills/omacal");
+        let link = h.path().join(".claude/skills/omacal-brian");
         assert_eq!(done.claude_link.as_deref(), Some(link.display().to_string().as_str()));
         assert!(link.symlink_metadata().unwrap().file_type().is_symlink());
         assert_eq!(std::fs::read_to_string(link.join("SKILL.md")).unwrap(), SKILL_MD);
@@ -250,7 +250,7 @@ mod tests {
     #[test]
     fn an_unmarked_directory_is_never_touched() {
         let h = home();
-        let theirs = h.path().join(".agents/skills/omacal");
+        let theirs = h.path().join(".agents/skills/omacal-brian");
         std::fs::create_dir_all(&theirs).unwrap();
         std::fs::write(theirs.join("SKILL.md"), "mine, hands off").unwrap();
         let err = install(h.path()).unwrap_err();
@@ -258,8 +258,8 @@ mod tests {
         assert_eq!(std::fs::read_to_string(theirs.join("SKILL.md")).unwrap(), "mine, hands off");
 
         let h2 = home();
-        std::fs::create_dir_all(h2.path().join(".claude/skills/omacal")).unwrap();
-        std::fs::write(h2.path().join(".claude/skills/omacal/SKILL.md"), "also mine").unwrap();
+        std::fs::create_dir_all(h2.path().join(".claude/skills/omacal-brian")).unwrap();
+        std::fs::write(h2.path().join(".claude/skills/omacal-brian/SKILL.md"), "also mine").unwrap();
         let err2 = install(h2.path()).unwrap_err();
         assert!(err2.contains("hand-authored"), "{err2}");
     }
@@ -282,10 +282,10 @@ mod tests {
     fn refresh_rewrites_owned_copies_and_nothing_else() {
         let h = home();
         install(h.path()).unwrap();
-        let owned = h.path().join(".agents/skills/omacal/SKILL.md");
+        let owned = h.path().join(".agents/skills/omacal-brian/SKILL.md");
         std::fs::write(&owned, "stale instructions for an old binary").unwrap();
 
-        let foreign = h.path().join(".claude/skills/omacal");
+        let foreign = h.path().join(".claude/skills/omacal-brian");
         std::fs::create_dir_all(&foreign).unwrap();
         std::fs::write(foreign.join("SKILL.md"), "hand-authored, no marker").unwrap();
 

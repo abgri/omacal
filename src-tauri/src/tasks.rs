@@ -552,7 +552,7 @@ pub(crate) const LIST_NEEDS_A_NAME: &str = "a list needs a name";
 pub(crate) const LIST_NAME_TOO_LONG: &str = "a list name can be up to 60 characters";
 pub(crate) const LIST_NAME_TAKEN: &str = "there is already a list called ";
 pub(crate) const NOT_A_TASK_LIST: &str =
-    "that is not a task list you can add to — `omacal tasks` names the lists in each row";
+    "that is not a task list you can add to — `omacal-brian tasks` names the lists in each row";
 
 /// `due_all_day` is `update_task`'s distinction: a date, or an hour on it.
 /// Left out, a due is a date — the add row's "by Friday" — and a list's own

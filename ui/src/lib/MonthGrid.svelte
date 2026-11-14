@@ -1,6 +1,7 @@
 <!-- ui/src/lib/MonthGrid.svelte -->
 <script lang="ts">
   import CalendarColors from './CalendarColors.svelte';
+  import { needsNeutralGreenEdge } from './ink';
   import { rotate } from './weekstart';
   import { weekStartDay } from './weekstartstore.svelte';
   import type { MonthPayload, UiEvent } from './api';
@@ -132,6 +133,7 @@
           {@const keyboardSelected = isBarSelected(lane, ev, row.cells)}
           <button
             class="bar"
+            class:neutral-green={needsNeutralGreenEdge(ev.color)}
             data-combined-count={ev.copies?.length || undefined}
             style:color={ev.copies?.length ? "var(--text)" : undefined}
             class:cl={lane.cont_left}
@@ -235,9 +237,15 @@
          overflow: hidden; text-overflow: ellipsis; margin: 0 2px;
          /* Keep the former 16% visual tint in an opaque base. The shared
             preference supplies all actual alpha once startup applies it. */
-         --event-fill: color-mix(in srgb, var(--cal) 16%, var(--bg));
-         background: color-mix(in srgb, var(--cal) 16%, transparent);
-         color: color-mix(in srgb, var(--cal) 60%, var(--text)); }
+         --event-fill: color-mix(in srgb, var(--cal) 22%, var(--bg));
+         background: color-mix(in srgb, var(--cal) 22%, transparent);
+         color: color-mix(in srgb, var(--cal) 27%, var(--text));
+         box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cal) 27.5%, transparent); }
+  .bar.neutral-green {
+    color: var(--text);
+    border-left-color: color-mix(in srgb, var(--cal) 50%, var(--text));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 32%, transparent);
+  }
   /* Saving (pending-changes spec): faded and dashed until Google confirms. */
   .bar.pending { opacity: .62; outline: 1.5px dashed var(--cal); outline-offset: -1.5px; }
   :global(:root[data-event-transparency]) .bar {

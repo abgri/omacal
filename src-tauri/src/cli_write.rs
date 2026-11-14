@@ -1,6 +1,6 @@
 //! The write half of the CLI, client side (CLI-writes spec §3–§5).
 //!
-//! `omacal events create|update|delete|respond` — parsed here, prechecked
+//! `omacal-brian events create|update|delete|respond` — parsed here, prechecked
 //! here, and then **executed by the running app** over the socket `ipc.rs`
 //! owns. This module never opens the database for writing; its read-only
 //! pool answers only what the refusals below need (does this event repeat,
@@ -102,7 +102,7 @@ pub(crate) struct RespondArgs {
     pub keep_meeting: bool,
 }
 
-/// `omacal events <verb> …` for the write verbs — `list` stays in `cli.rs`,
+/// `omacal-brian events <verb> …` for the write verbs — `list` stays in `cli.rs`,
 /// whose read-only doctrine this module deliberately does not touch.
 pub(crate) fn parse_events(verb: &str, rest: &[&String]) -> Result<WriteCmd, String> {
     let take = |name: &str| -> Result<Option<String>, String> {
@@ -135,20 +135,20 @@ pub(crate) fn parse_events(verb: &str, rest: &[&String]) -> Result<WriteCmd, Str
         take(name)?.ok_or_else(|| format!("{name} is required"))
     };
     let id_of = |v: &str| -> Result<i64, String> {
-        v.parse().map_err(|_| "the event id is a number — `omacal events list` prints them".into())
+        v.parse().map_err(|_| "the event id is a number — `omacal-brian events list` prints them".into())
     };
     let ms_of = |name: &str, v: &str| -> Result<i64, String> {
         v.parse().map_err(|_| {
-            format!("{name} takes the occurrence's startMs — `omacal events list --json` prints it")
+            format!("{name} takes the occurrence's startMs — `omacal-brian events list --json` prints it")
         })
     };
     // The verbs that address an occurrence all lead with the id, bare —
-    // `omacal events delete 41 --occurrence …` — matching how phase 1
+    // `omacal-brian events delete 41 --occurrence …` — matching how phase 1
     // prints them back.
     let bare_id = || -> Result<i64, String> {
         rest.first()
             .filter(|a| !a.starts_with("--"))
-            .ok_or_else(|| "the event id comes first — `omacal events list` prints them".to_string())
+            .ok_or_else(|| "the event id comes first — `omacal-brian events list` prints them".to_string())
             .and_then(|v| id_of(v))
     };
 
@@ -224,7 +224,7 @@ pub(crate) fn parse_events(verb: &str, rest: &[&String]) -> Result<WriteCmd, Str
                 .skip(1)
                 .find(|a| !a.starts_with("--"))
                 .map(|a| a.to_string())
-                .ok_or_else(|| "usage: omacal events respond ID yes|maybe|no".to_string())?;
+                .ok_or_else(|| "usage: omacal-brian events respond ID yes|maybe|no".to_string())?;
             Ok(WriteCmd::Respond(RespondArgs {
                 id: bare_id()?,
                 answer,
@@ -510,7 +510,7 @@ pub(crate) fn own_no_rule(
 
 /// `--date` + `--start`/`--end` (+ optional `--end-date`) to the wire's
 /// instants, read in `tz` — the display zone at runtime, because that is
-/// the zone every time in omacal means. Strict `HH:MM`: a CLI is where
+/// the zone every time in omacal-brian means. Strict `HH:MM`: a CLI is where
 /// scripts speak, not where people mistype, and a guess stored is a guess
 /// on somebody's calendar.
 pub(crate) fn timed_when(
@@ -780,7 +780,7 @@ async fn target(pool: &SqlitePool, id: i64) -> Result<Target, String> {
         omacal_store::event_for_detail(pool, id)
             .await
             .map_err(|e| e.to_string())?
-            .ok_or_else(|| format!("no event {id} — `omacal events list` prints real ids"))?;
+            .ok_or_else(|| format!("no event {id} — `omacal-brian events list` prints real ids"))?;
     let is_organizer = crate::events::owns_event(
         event.organizer_email.as_deref(),
         &account_email,
@@ -959,9 +959,9 @@ pub(crate) async fn execute(pool: &SqlitePool, cmd: &WriteCmd, json: bool) -> i3
             // start is the first occurrence, never a safe guess for "this one".
             let cancel = if t.recurring {
                 let ms = args.occurrence.map_or("MS".to_string(), |o| o.to_string());
-                format!("omacal events delete {} --occurrence {ms} --scope this|following|all", args.id)
+                format!("omacal-brian events delete {} --occurrence {ms} --scope this|following|all", args.id)
             } else {
-                format!("omacal events delete {} --occurrence {occurrence}", args.id)
+                format!("omacal-brian events delete {} --occurrence {occurrence}", args.id)
             };
             if let Err(m) =
                 own_no_rule(response, t.reach, t.mails_guests, &t.left_out, args.keep_meeting, &cancel)
@@ -986,13 +986,13 @@ pub(crate) fn send(request: &serde_json::Value, json: bool, done_word: &str) -> 
         Err(CallError::NotRunning) => fail(
             json,
             "not_running",
-            "omacal is not running — launch it first (writes go through the app's own guards)",
+            "omacal-brian is not running — launch it first (writes go through the app's own guards)",
             EXIT_NOT_RUNNING,
         ),
         Err(CallError::Timeout) => fail(
             json,
             "timeout",
-            "omacal did not answer within 60s — the write's fate is unknown; check the calendar \
+            "omacal-brian did not answer within 60s — the write's fate is unknown; check the calendar \
              before retrying",
             EXIT_ERROR,
         ),
@@ -1192,7 +1192,7 @@ mod tests {
     fn your_own_no_is_refused_until_the_meeting_is_said_to_stay() {
         use crate::events::Reach;
         let teodor = ["Teodor".to_string()];
-        let hint = "omacal events delete 41 --occurrence 1793019600000";
+        let hint = "omacal-brian events delete 41 --occurrence 1793019600000";
         let err = own_no_rule("declined", Reach::Organizer, true, &teodor, false, hint).unwrap_err();
         assert!(err.contains("you organise this"), "{err}");
         assert!(err.contains("Teodor's calendar"), "{err}");

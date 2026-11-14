@@ -825,14 +825,16 @@ mod tests {
     #[test]
     fn the_accepting_click_exists_only_for_an_answerable_google_event() {
         let n = invite_notification(&candidate(), SOFIA);
-        assert_eq!(
-            n.actions,
-            vec![Action::AcceptInvite { event_id: 7, start_ms: NOW + HOUR }]
-        );
-        assert!(
-            n.body.ends_with("Click to accept · right-click to dismiss"),
-            "{}", n.body
-        );
+        if cfg!(target_os = "linux") {
+            assert_eq!(
+                n.actions,
+                vec![Action::AcceptInvite { event_id: 7, start_ms: NOW + HOUR }]
+            );
+            assert!(n.body.ends_with("Click to accept · right-click to dismiss"), "{}", n.body);
+        } else {
+            assert!(n.actions.is_empty(), "this platform has no notification RSVP transport");
+            assert!(!n.body.contains("Click to accept"), "must not promise an unavailable action");
+        }
 
         let mut caldav = candidate();
         caldav.provider = "caldav".into();
@@ -843,7 +845,7 @@ mod tests {
             "must not instruct a click that does nothing"
         );
         // Sticky with no click of its own still spells its way out.
-        assert!(n.body.ends_with("Right-click to dismiss"), "{}", n.body);
+        assert_eq!(n.body.ends_with("Right-click to dismiss"), cfg!(target_os = "linux"), "{}", n.body);
 
         let mut reader = candidate();
         reader.access_role = "reader".into();

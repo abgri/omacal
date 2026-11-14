@@ -88,3 +88,17 @@ export function foregroundFor(color: string): string {
   const luminance = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
   return luminance > LUMINANCE_PIVOT ? INK_ON_LIGHT : INK_ON_DARK;
 }
+
+/** Green/teal calendars get a neutral edge and ink: hue alone is not a
+ * reliable boundary. Keep lavender/blue and greys on the standard treatment.
+ * Hue 90–185 covers the approved teal and Google's green calendar colours. */
+export function needsNeutralGreenEdge(color: string): boolean {
+  const rgb = parseHex(color);
+  if (!rgb) return false;
+  const [r, g, b] = rgb.map(v => v / 255);
+  const hi = Math.max(r, g, b), lo = Math.min(r, g, b), delta = hi - lo;
+  if (delta < 0.08) return false;
+  const raw = hi === r ? ((g - b) / delta) % 6 : hi === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+  const hue = (raw * 60 + 360) % 360;
+  return hue >= 90 && hue <= 185;
+}

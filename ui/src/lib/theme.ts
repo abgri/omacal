@@ -31,8 +31,8 @@ export function setPalette(p: Palette): void {
   // live by, so an accent from colors.toml — which can be anything the theme
   // author liked — always gets a legible ink chosen against the fill itself.
   r.setProperty('--on-accent', foregroundFor(p.accent));
-  r.setProperty('--hairline', p.is_dark ? 'rgba(255,255,255,.055)' : 'rgba(0,0,0,.07)');
-  r.setProperty('--hour-rule', p.is_dark ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.05)');
+  r.setProperty('--hairline', p.is_dark ? 'rgba(255,255,255,.0825)' : 'rgba(0,0,0,.099)');
+  r.setProperty('--hour-rule', p.is_dark ? 'rgba(255,255,255,.055)' : 'rgba(0,0,0,.0715)');
   r.setProperty('--today-tint', p.is_dark ? 'rgba(255,255,255,.028)' : 'rgba(0,0,0,.025)');
   // The two endpoints for text drawn on a *calendar's own colour* rather than
   // on the theme's background — Big Year's solid pills. Which one a given

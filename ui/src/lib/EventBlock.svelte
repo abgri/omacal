@@ -1,5 +1,6 @@
 <script lang="ts">
   import CalendarColors from './CalendarColors.svelte';
+  import { needsNeutralGreenEdge } from './ink';
   import type { ColorSegment } from './combined';
   import { clockFormat } from './clock.svelte';
   import { RESIZE_EDGE_PX, beganDrag, hasResizeEdges } from './drag';
@@ -202,6 +203,7 @@
   }}>
 <button
   class="ev {event.response}"
+  class:neutral-green={needsNeutralGreenEdge(event.color)}
   data-combined-count={event.copies?.length || undefined}
   style:color={event.copies?.length ? "var(--text)" : undefined}
   class:nobodycoming={event.all_guests_declined}
@@ -420,18 +422,29 @@
        otherwise a whole-hour boundary also exposes `.rule`, making hourly
        gaps look heavier than half-hour gaps. */
     --spine: var(--cal);
-    box-shadow: inset 2px 0 0 0 var(--spine),
+    --event-edge: color-mix(in srgb, var(--cal) 27.5%, transparent);
+    box-shadow: inset 0 0 0 1px var(--event-edge),
+                inset 2px 0 0 0 var(--spine),
                 0 -1px 0 0 var(--bg), 0 1px 0 0 var(--bg);
     background-clip: padding-box;
     /* Composited over --bg, not `transparent`. Blocks overlap constantly, and a
        translucent fill lets the one behind read through — its title, and its
        rounded corners poking past this one's. Against the column background the
-       result is indistinguishable from a 7% wash, because the column background
+       result is a slightly stronger 13.2% wash, because the column background
        IS --bg. */
-    --event-fill: color-mix(in srgb, var(--cal) 7%, var(--bg));
-    background: color-mix(in srgb, var(--cal) 7%, var(--bg));
-    color: color-mix(in srgb, var(--cal) 65%, var(--text));
+    --event-fill: color-mix(in srgb, var(--cal) 13.2%, var(--bg));
+    background: color-mix(in srgb, var(--cal) 13.2%, var(--bg));
+    color: color-mix(in srgb, var(--cal) 27%, var(--text));
     font: inherit;
+  }
+  /* Neutral ink/edge gives green cards definition without relying on hue.
+     Kept before RSVP state rules so declined and unanswered remain distinct. */
+  .ev.neutral-green {
+    --event-edge: color-mix(in srgb, var(--text) 32%, transparent);
+    --spine: color-mix(in srgb, var(--cal) 50%, var(--text));
+    --event-fill: color-mix(in srgb, var(--cal) 17%, var(--bg));
+    background: var(--event-fill);
+    color: var(--text);
   }
   /* Hover lifts the block to full width so a squeezed 3-way pile stays
      readable without changing the layout rules (spec §7.1).
@@ -444,7 +457,8 @@
      one; this rule had been losing the same fight invisibly until a dense
      iCloud week made it obvious. */
   .ev.hovered { left: 3px !important; width: calc(100% - 6px) !important; z-index: 20 !important;
-              box-shadow: inset 2px 0 0 0 var(--spine),
+              box-shadow: inset 0 0 0 1px var(--event-edge),
+                inset 2px 0 0 0 var(--spine),
                           0 -1px 0 0 var(--bg), 0 1px 0 0 var(--bg),
                           0 4px 14px rgba(0, 0, 0, .5); }
   /* Keep every saved event below the creation preview, regardless of its
@@ -514,6 +528,9 @@
      wins over the per-state backgrounds above at equal specificity. */
   .ev:hover { --event-fill: color-mix(in srgb, var(--cal) 16%, var(--bg));
               background-color: color-mix(in srgb, var(--cal) 16%, var(--bg)); }
+
+  .ev.neutral-green:hover { --event-fill: color-mix(in srgb, var(--cal) 20%, var(--bg));
+                            background-color: var(--event-fill); }
 
   /* The preference fades the fill colour, never the element: opacity here
      would also fade the title, RSVP mark, outline and colour spine. Hover

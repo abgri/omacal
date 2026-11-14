@@ -13,3 +13,12 @@ test-results/
 /build
 /.flatpak-builder
 /repo
+
+# Personal OAuth/config material must stay outside the fork.
+.env
+.env.*
+!.env.example
+client_secret*.json
+/config.toml
+/credentials/
+/oauth/

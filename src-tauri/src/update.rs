@@ -1,20 +1,8 @@
-//! The update notice — knowing a newer release exists, saying so once — and,
-//! on exactly one channel, the button that acts on it.
+//! Read-only upstream release awareness for the personal fork.
 //!
-//! The notice is the foundation and it is universal: an installed copy
-//! otherwise runs unchanged forever with no way to learn that a newer
-//! version exists, which matters doubly here because a rotated OAuth secret
-//! strands old binaries (distribution runbook) and the only cure is the
-//! update the user never heard about.
-//!
-//! Acting on the notice is narrower. The AppImage — the installer
-//! one-liner's channel, and most installs — is one user-owned file, so
-//! [`install_update`] can replace it in place: a signed download, verified
-//! against the pubkey in `tauri.conf.json`, then the same restart the
-//! moved-zone banner uses. Every packaged install (.deb, .rpm, AUR,
-//! Flatpak) keeps the notice-only banner, because there the files belong to
-//! a package manager and the update mechanism is that manager, as the
-//! user's own act. [`may_self_update`] is that decision, stated once.
+//! Stock update installation is disabled on every platform. New versions
+//! require a reviewed merge and custom rebuild so this app's isolation and
+//! visual changes cannot be replaced by the official release installer.
 //!
 //! Split the way `sync_loop` and `tray` are: the decisions — is a tag newer,
 //! does a response announce a notice, may demo check at all, may this build
@@ -61,23 +49,12 @@ pub(crate) fn may_check(demo: bool) -> bool {
     !demo
 }
 
-/// Whether this process may replace itself — the gate on the banner's
-/// "Update" button and on [`install_update`], decided from three facts.
-///
-/// The AppImage qualifies because it is one file the user owns, so
-/// replacing it is an ordinary write. macOS qualifies since 2026-08-25,
-/// when the first notarization cleared: the .app is the user's own too,
-/// and the *signed* guarantee lives in the pipeline, not here — the
-/// updater manifest only ever carries a `darwin-aarch64` entry when Apple
-/// signing actually ran (release.yml's join job), so an unsigned build
-/// cannot be offered as an update whatever this gate says. Everything
-/// else is somebody else's property — dpkg's, rpm's, pacman's, flatpak's —
-/// and a binary that overwrites files a package manager believes it owns
-/// corrupts exactly the record that manager exists to keep. Those
-/// channels keep the notice-only banner. And demo stays out for
-/// `may_check`'s reason: a download is network traffic.
-pub(crate) fn may_self_update(is_appimage: bool, is_macos: bool, demo: bool) -> bool {
-    (is_appimage || is_macos) && !demo
+/// Personal builds never install a stock release. Kept as a tested backend
+/// gate as well as removing the updater plugin and its manifest config.
+pub(crate) fn may_self_update(_is_appimage: bool, _is_macos: bool, _demo: bool) -> bool {
+    // A stock update would remove this fork and cross its credential/data boundary.
+    // Upstream release notices remain read-only; updates require a reviewed rebuild.
+    false
 }
 
 /// Whether this process is running out of an AppImage. The AppImage runtime
@@ -305,7 +282,7 @@ pub(crate) async fn install_update(
         // `get_status` said yes — so this is the backend refusing to trust
         // the webview's gating, same as `open_latest_release` refusing its
         // URL.
-        return Err("This build updates through its package manager.".into());
+        return Err("OmaCal Brian updates through reviewed custom builds; stock updates cannot be installed.".into());
     }
 
     use tauri_plugin_updater::UpdaterExt;
@@ -418,13 +395,14 @@ mod tests {
     /// Parameters rather than `cfg!`, so every platform's answer is pinned
     /// from any platform's test run.
     #[test]
-    fn only_a_non_demo_appimage_or_macos_build_may_self_update() {
-        assert!(may_self_update(true, false, false));
-        assert!(may_self_update(false, true, false), "signed macOS lost its button");
-        assert!(!may_self_update(false, false, false), "a packaged build offered to replace itself");
-        assert!(!may_self_update(true, false, true), "demo offered to make network traffic");
-        assert!(!may_self_update(false, true, true), "demo on macOS offered network traffic");
-        assert!(!may_self_update(false, false, true));
+    fn personal_fork_never_installs_stock_updates() {
+        for appimage in [false, true] {
+            for macos in [false, true] {
+                for demo in [false, true] {
+                    assert!(!may_self_update(appimage, macos, demo));
+                }
+            }
+        }
     }
 
     /// Through the real fetch path, with the one header the whole feature

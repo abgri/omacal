@@ -37,7 +37,7 @@ pub(crate) fn socket_path() -> Option<std::path::PathBuf> {
     if let Some(dir) = std::env::var_os("XDG_RUNTIME_DIR") {
         let dir = std::path::Path::new(&dir);
         if dir.is_absolute() {
-            return Some(dir.join("omacal").join("ipc.sock"));
+            return Some(dir.join(crate::identity::SLUG).join("ipc.sock"));
         }
     }
     Some(crate::cli::db_path()?.parent()?.join("ipc.sock"))

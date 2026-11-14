@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 mod accounts;
+mod identity;
 mod browser;
 mod caldav_account;
 mod cli;
@@ -429,7 +430,7 @@ async fn get_big_year_impl(
     } else { commands::assemble_big_year(&events, year, now, tz, week_start) })
 }
 
-pub(crate) const KEYRING_SERVICE: &str = "omacal";
+pub(crate) const KEYRING_SERVICE: &str = identity::KEYRING_SERVICE;
 
 /// Google's Calendar API root. A constant so the one place that overrides it —
 /// a test pointing `sync_accounts` at a local mock — is the only place a
@@ -442,23 +443,17 @@ struct Config {
     client_secret: String,
 }
 
-/// The pair baked into official release builds, and only those: absent unless
-/// the build ran with `OMACAL_CLIENT_ID`/`OMACAL_CLIENT_SECRET` set
-/// (distribution.md §1). `option_env!` reads them at *compile* time, so a dev
-/// build on a machine without the env vars carries `None` and behaves exactly
-/// as it always has. The values arrive in CI as repository secrets; they are
-/// extractable from any shipped binary regardless — Google's own position for
-/// installed apps — and keeping them out of source is what keeps rotation
-/// meaningful.
-const EMBEDDED_CLIENT_ID: Option<&str> = option_env!("OMACAL_CLIENT_ID");
-const EMBEDDED_CLIENT_SECRET: Option<&str> = option_env!("OMACAL_CLIENT_SECRET");
+/// Optional credentials for this personal fork only. Prefer its isolated local
+/// config file; never inherit the publisher's release-build credential variables.
+const EMBEDDED_CLIENT_ID: Option<&str> = option_env!("OMACAL_BRIAN_CLIENT_ID");
+const EMBEDDED_CLIENT_SECRET: Option<&str> = option_env!("OMACAL_BRIAN_CLIENT_SECRET");
 
-/// Reads `~/.config/omacal/config.toml`, which holds the Google Cloud client
+/// Reads `~/.config/omacal-brian/config.toml`, which holds the Google Cloud client
 /// credentials (spec §9), falling back to the embedded pair when the file is
 /// absent.
 fn load_config() -> anyhow::Result<Config> {
     let home = std::env::var("HOME")?;
-    let path = std::path::Path::new(&home).join(".config/omacal/config.toml");
+    let path = std::path::Path::new(&home).join(identity::CONFIG_RELATIVE_PATH);
     load_config_from(&path, EMBEDDED_CLIENT_ID, EMBEDDED_CLIENT_SECRET)
 }
 
@@ -1214,7 +1209,7 @@ pub fn apply_gtk_theme_early() {
 /// zone, because they all capture it at process start and never ask again.
 /// That constraint is also why this cannot use Tauri's path resolver or the
 /// database: neither exists yet. The directory below is `app_data_dir` for
-/// identifier `com.omacal.app`, spelled by hand; if the two ever diverge the
+/// identifier `com.brianacklen.omacal`, spelled by hand; if the two ever diverge the
 /// failure is the soft one — the setting silently stays on the system zone —
 /// and `setup`'s sidecar re-sync writes to the real dir every launch, so a
 /// divergence would also heal itself there.
@@ -1227,7 +1222,7 @@ pub fn apply_display_tz_early() {
     // `cli::app_data_dir` is the one derivation — it was reproduced here with
     // `#[cfg]` blocks that Linux CI never compiled, and the two had drifted:
     // this copy filtered a relative `XDG_DATA_HOME` and that one did not, and
-    // that one required `HOME` even when `XDG_DATA_HOME` was set. `com.omacal.app`
+    // that one required `HOME` even when `XDG_DATA_HOME` was set. `com.brianacklen.omacal`
     // is spelled once more, rather than a fourth time.
     let Some(dir) = crate::cli::app_data_dir() else { return };
     let sidecar = std::fs::read_to_string(dir.join(settings::DISPLAY_TZ_SIDECAR))
@@ -1310,7 +1305,7 @@ fn tz_action(sidecar: Option<&str>, we_set_it: bool) -> TzAction {
 /// The single-instance plugin, with the one wrinkle a sandbox adds.
 ///
 /// The bus name is `<dbus_id>.SingleInstance`, and `dbus_id` defaults to the
-/// Tauri identifier — `com.omacal.app`, which is fine everywhere the app
+/// Tauri identifier — `com.brianacklen.omacal`, which is fine everywhere the app
 /// owns its session bus outright. Inside a Flatpak it is not: the sandbox
 /// grants only names under the Flatpak app id, and Flathub's linter refuses
 /// `--own-name` for anything else as an exception it "never grants". So
@@ -1428,21 +1423,17 @@ pub fn run() {
         // capability is granted to the webview and the frontend cannot
         // open a chooser of its own.
         .plugin(tauri_plugin_dialog::init())
-        // The self-updater behind the banner's "Update" button. Registration
-        // is unconditional; whether the button exists at all is
-        // `update::may_self_update`'s decision — AppImage only, never demo —
-        // enforced again inside `update::install_update` for a webview that
-        // did not take no for an answer.
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        // Personal fork: do not register the stock self-updater. Release
+        // awareness is read-only and install_update also refuses in the backend.
         // Registered unconditionally; *enabling* it is what the demo guard
         // gates, in `setup` below. Registration alone adds no login item.
-        .plugin(tauri_plugin_autostart::init(
-            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            // The entry says where the launch came from; `setup` reads the
-            // preference and decides what that means. See `AUTOSTART_FLAG`
-            // for why the flag cannot instead be the instruction.
-            Some(vec![tray::AUTOSTART_FLAG]),
-        ));
+        .plugin(tauri_plugin_autostart::Builder::new()
+            // Explicit identity: the plugin otherwise falls back to the Cargo
+            // package name, which is still `omacal` and would collide.
+            // Its default macOS strategy is LaunchAgent, not AppleScript.
+            .app_name(identity::SLUG)
+            .arg(tray::AUTOSTART_FLAG)
+            .build());
 
     // Registered so `app.notification()` resolves for `notify::MacNotifier`.
     // Registration alone posts nothing — it makes the transport available, and
