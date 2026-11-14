@@ -15,6 +15,9 @@ mod tests {
         assert_eq!(config["identifier"], APP_ID);
         assert_eq!(config["productName"], "OmaCal Brian");
         assert_eq!(config["mainBinaryName"], SLUG);
+        let macos: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.macos.conf.json")).unwrap();
+        assert_eq!(macos["productName"], config["productName"]);
         assert_ne!(APP_ID, "com.omacal.app");
         assert_ne!(KEYRING_SERVICE, "omacal");
         assert_ne!(CONFIG_RELATIVE_PATH, ".config/omacal/config.toml");
